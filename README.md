@@ -12,6 +12,22 @@ Monitor your ZFS pools effortlessly and receive near real-time alerts in Discord
 - **Configurable**: Easily customize alerts using a ENV vars.
 - **Dockerized**: Run the script as a background service using Docker Compose.
 
+### Screenshots
+
+**Default**:
+
+<img alt="Healthy" src="screenshots/healthy.png" height="175">
+
+> [!NOTE]
+> Standard mode only shows pool and drive counts.
+
+**Verbose**:
+
+<img alt="Healthy" src="screenshots/verbose-healthy.png" height="175"> <img alt="Healthy" src="screenshots/verbose-degraded.png" height="175"> <img alt="Healthy" src="screenshots/verbose-replacing.png" height="175">
+
+> [!NOTE]
+> Verbose also lists Degraded drives separately with a warning triangle.
+
 ## Prerequisites
 
 - Docker and Docker Compose installed on your system.
@@ -53,7 +69,8 @@ Monitor your ZFS pools effortlessly and receive near real-time alerts in Discord
 
     Notifications will appear in the designated Discord channel with details when something in the pools changes.
 
-    There will be an initial message when starting, even if it only says that everything is `ONLINE` (healthy).
+> [!TIP]
+> There will be an initial message when starting, even if it only says that everything is `ONLINE` (healthy). After that only changes in status will be reported.
 
 ### Troubleshooting
 
