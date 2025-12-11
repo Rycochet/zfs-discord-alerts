@@ -1,0 +1,12 @@
+services:
+  docker-discord-alerts:
+    container_name: docker-discord-alerts
+    image: ghcr.io/rycochet/docker-discord-alerts:latest
+    restart: unless-stopped
+    privileged: true
+    environment:
+      DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/..." # Get this from Discord
+      EXTRA: "" # Maybe ping someone with "<@USER_ID>"
+      LOG_LEVEL: "INFO" # Normal linux log levels
+      POOLS: "" # Empty for watching everything, space separated
+      VERBOSE: "False" # Gives more information on alerts
