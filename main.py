@@ -153,7 +153,7 @@ def check():
 
     def count_by_state(data, obj):
         data['total'] += 1
-        if obj['state'] == 'ONLINE':
+        if obj['state'] == 'ONLINE' or obj['state'] == 'AVAIL':
             data['online'] += 1
         elif obj['state'] == 'DEGRADED' or obj['state'] == 'INUSE':
             data['degraded'] += 1
