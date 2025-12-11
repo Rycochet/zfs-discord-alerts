@@ -4,6 +4,8 @@ services:
     image: ghcr.io/rycochet/docker-discord-alerts:latest
     restart: unless-stopped
     privileged: true
+    devices:
+      - "/dev/zfs:/dev/zfs"
     environment:
       DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/..." # Get this from Discord
       EXTRA: "" # Maybe ping someone with "<@USER_ID>"

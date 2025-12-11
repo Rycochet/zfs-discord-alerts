@@ -29,6 +29,8 @@ Monitor your ZFS pools effortlessly and receive near real-time alerts in Discord
             container_name: zfs-discord-alerts
             image: ghcr.io/rycochet/zfs-discord-alerts:latest
             restart: unless-stopped
+            devices:
+                - "/dev/zfs:/dev/zfs"
             environment:
                 DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/..."
     ```
