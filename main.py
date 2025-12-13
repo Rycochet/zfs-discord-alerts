@@ -29,7 +29,7 @@ if not DISCORD_WEBHOOK_URL:
     raise ValueError("DISCORD_WEBHOOK_URL is required")
 
 try:
-    DISCORD_MAX_RETRIES = int(os.environ.get('DISCORD_MAX_RETRIES', "5"))
+    DISCORD_MAX_RETRIES = int(os.environ.get('DISCORD_MAX_RETRIES', "3"))
 except ValueError as err:
     raise ValueError("DISCORD_MAX_RETRIES must be a valid integer") from err
 if DISCORD_MAX_RETRIES < 0:
