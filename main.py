@@ -26,23 +26,29 @@ logger = logging.getLogger(__name__)
 # Discord configuration
 DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL')
 if not DISCORD_WEBHOOK_URL:
-    raise ValueError("DISCORD_WEBHOOK_URL environment variable is required")
+    raise ValueError("DISCORD_WEBHOOK_URL is required")
 
 try:
-    DISCORD_MAX_RETRIES = int(os.environ.get('DISCORD_MAX_RETRIES', '5'))
-except ValueError:
-    raise ValueError("DISCORD_MAX_RETRIES environment variable must be a valid integer")
+    DISCORD_MAX_RETRIES = int(os.environ.get('DISCORD_MAX_RETRIES', "5"))
+except ValueError as err:
+    raise ValueError("DISCORD_MAX_RETRIES must be a valid integer") from err
+if DISCORD_MAX_RETRIES < 0:
+    raise ValueError("DISCORD_MAX_RETRIES must be >= 0")
 
 try:
-    DISCORD_RETRY_DELAY = int(os.environ.get('DISCORD_RETRY_DELAY', '5'))
-except ValueError:
-    raise ValueError("DISCORD_RETRY_DELAY environment variable must be a valid integer")
+    DISCORD_RETRY_DELAY = int(os.environ.get('DISCORD_RETRY_DELAY', "5"))
+except ValueError as err:
+    raise ValueError("DISCORD_RETRY_DELAY must be a valid integer") from err
+if DISCORD_RETRY_DELAY < 0:
+    raise ValueError("DISCORD_RETRY_DELAY must be >= 0")
 
 # How long should we wait between checks - 5 minutes default
 try:
     CHECK_DELAY = int(os.environ.get('CHECK_DELAY', "5"))
-except ValueError:
-    raise ValueError("CHECK_DELAY environment variable must be a valid integer")
+except ValueError as err:
+    raise ValueError("CHECK_DELAY must be a valid integer") from err
+if CHECK_DELAY < 0:
+    raise ValueError("CHECK_DELAY must be >= 0")
 
 # Extra text to add to notifications
 EXTRA = os.environ.get('EXTRA', "")
@@ -56,7 +62,7 @@ pools_tmp = re.sub(
     pools_env
 )
 if len(pools_env) != len(pools_tmp):
-    raise ValueError("POOLS environment variable contains invalid pool names: https://docs.oracle.com/cd/E26505_01/html/E37384/gbcpt.html")
+    raise ValueError("POOLS contains invalid pool names: https://docs.oracle.com/cd/E26505_01/html/E37384/gbcpt.html")
 POOLS = pools_tmp
 
 # Show disk usage, this will result in updates roughtly every TB
@@ -74,8 +80,10 @@ HOST = os.environ.get('HOST', "0.0.0.0")
 # Port to bind to, default is 8080
 try:
     PORT = int(os.environ.get('PORT', "8080"))
-except ValueError:
-    raise ValueError("PORT environment variable must be a valid integer")
+except ValueError as err:
+    raise ValueError("PORT must be a valid integer") from err
+if not (0 < PORT < 65536):
+    raise ValueError("PORT must be in range 1..65535")
 
 def get_embed(prefix, data):
     """
@@ -111,7 +119,7 @@ def get_embed(prefix, data):
     if 'alloc_space' in data and 'total_space' in data:
         description += f", {data['alloc_space']} / {data['total_space']} used"
 
-    for vdev_name, vdev in data['vdevs'].items():
+    for vdev_name, vdev in data.get("vdevs", {}).items():
         vdev_icon = '\🛑' if vdev['total'] and vdev['online'] + vdev['degraded'] == 0 else '\✅' if vdev['online'] == vdev['total'] else "\⚠️"
         fields.append({
             "name": f"{vdev_icon} {vdev_name}",
@@ -202,7 +210,7 @@ def check():
     data structure with top-level counters and per-pool entries under `vdevs`.
     Each pool entry contains `total`, `online`, `degraded` counters, a `vdevs`
     mapping of vdev summaries with the same counters, and lists
-    `degraded_drives` and `offline_drives` for any non‑online devices. When
+    `degraded_drives` and `offline_drives` for any non-online devices. When
     SHOW_SPACE is enabled and space data is present, pool entries also include
     `alloc_space` and `total_space`. The completed structure is passed to
     check_status. Any subprocess.CalledProcessError raised while querying ZFS is
@@ -221,7 +229,9 @@ def check():
             data['degraded'] += 1
 
     try:
-        status = json.loads(subprocess.check_output(f"zpool status -j {POOLS}", shell=True, text=True))
+        pools = [p for p in re.split(r"[\s,]+", POOLS.strip()) if p]
+        cmd = ["zpool", "status", "-j", *pools]
+        status = json.loads(subprocess.check_output(cmd, text=True))
         data = {}
 
         logger.debug(json.dumps(status))
@@ -324,7 +334,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             for key in path.split("/"):
                 if not key:
                     continue
-                if key not in data:
+                if not isinstance(data, dict) or key not in data:
                     self.send_response(404)
                     self.end_headers()
                     return
@@ -371,6 +381,8 @@ def main():
     with status code 1.
     """
     try:
+        server = None
+        thread = None
         if WEBSERVER:
             logger.info("Starting web server")
             server = http.server.ThreadingHTTPServer((HOST, PORT), Handler)
@@ -381,6 +393,12 @@ def main():
         while not shutdown_event.is_set():
             check()
             shutdown_event.wait(CHECK_DELAY)
+
+        if server is not None:
+            server.shutdown()
+            server.server_close()
+            if thread is not None:
+                thread.join(timeout=5)
 
     except Exception:
         logger.exception("Application error")
