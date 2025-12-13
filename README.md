@@ -93,3 +93,40 @@ Monitor your ZFS pools effortlessly and receive near real-time alerts in Discord
 | `POOLS` | A space separated list of pools to check, by default it will check everything. | |
 | `SHOW_SPACE` | Whether to show the space used, this will send an update to Discord when it changes at about 0.1 units (Gb / Tb / Pb etc). (`True` / `False`) | `False` |
 | `VERBOSE` | Provide more detail for the Discord messages. (`True` / `False`) | `False` |
+| `WEBSERVER` | Whether to run the internal webserver. (`True` / `False`) <br> **IMPORTANT**: This is unsecured so make sure it is not accessible from the internet! | `False` |
+| `HOST` | The host for the webserver (the default will bind to all interfaces). | `0.0.0.0` |
+| `PORT` | The port for the webserver. | `8080` |
+
+## Web Server
+
+If this is running, there is an unsecured webserver that you can query for basic information. The `/_ping` endpoint replies with a `204` for use as a health check. Otherwise, it supplies this data shape:
+
+```json
+{
+    "total": 0,
+    "online": 0,
+    "degraded": 0,
+    "vdevs": {
+        "<each pool name>": {
+            "degraded_drives": [
+                 "<id>"
+            ],
+            "offline_drives": [
+                "<id>"
+            ],
+            "vdevs": {
+                "<each vdev name>": { "total": 0, "online": 0, "degraded": 0 },
+                "logs": { "total": 0, "online": 0, "degraded": 0 },
+                "cache": { "total": 0, "online": 0, "degraded": 0 },
+                "spares": { "total": 0, "online": 0, "degraded": 0 }
+            },
+            "total": 0,
+            "online": 0,
+            "degraded": 0
+        }
+    }
+}
+```
+
+> [!NOTE]
+> You can pass a path and only get the JSON from that depth, ie `/vdevs/<mypool>/degraded_drives` would give you an array of any degraded drive names.

@@ -61,9 +61,12 @@ jobs:
             ghcr.io/${{ env.IMAGE_NAME }}
           tags: |
             # tagged releases
-            type=semver,pattern={{major}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}.{{minor}}.{{patch}}
+            # set branch name for other branches
+            type=ref,event=branch
+            type=ref,event=pr
             # set latest tag for default branch
             type=raw,value=latest,enable={{is_default_branch}}
 
