@@ -18,8 +18,8 @@ load_dotenv()
 isTTY = sys.stdout.isatty()
 
 logging.basicConfig(
-    level = os.getenv('LOG_LEVEL', 'INFO').upper(),
-    format = '[%(asctime)s] %(levelname)s: %(message)s'
+    level = os.getenv('LOG_LEVEL', "INFO").upper(),
+    format = "[%(asctime)s] %(levelname)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -40,16 +40,16 @@ except ValueError:
 
 # How long should we wait between checks - 5 minutes default
 try:
-    CHECK_DELAY = int(os.environ.get('CHECK_DELAY', '5'))
+    CHECK_DELAY = int(os.environ.get('CHECK_DELAY', "5"))
 except ValueError:
     raise ValueError("CHECK_DELAY environment variable must be a valid integer")
 
 # Extra text to add to notifications
-EXTRA = os.environ.get('EXTRA', '')
+EXTRA = os.environ.get('EXTRA', "")
 
 # Pools monitoring configuration - see error link for the rules, anything breaking it is removed and if they have different lengths it raises an error
 # Coincidentally anything that breaks these rules can also break security as we pass this on a command line!
-pools_env = os.environ.get('POOLS', '').strip()
+pools_env = os.environ.get('POOLS', "").strip()
 pools_tmp = re.sub(
     r"(?:[^a-zA-Z0-9_.:,\s-]|\b(?:c[0-9]\S*|log|mirror|raidz[1-3]?|spare|[0-9_.:-].*)\b)",
     "",
@@ -60,20 +60,20 @@ if len(pools_env) != len(pools_tmp):
 POOLS = pools_tmp
 
 # Show disk usage, this will result in updates roughtly every TB
-SHOW_SPACE = os.getenv("SHOW_SPACE", 'False').lower() in ('true', '1', 'yes')
+SHOW_SPACE = os.getenv('SHOW_SPACE', "False").lower() in ("true", "1", "yes")
 
 # Verbose monitoring configuration
-VERBOSE = os.getenv("VERBOSE", 'False').lower() in ('true', '1', 'yes')
+VERBOSE = os.getenv('VERBOSE', "False").lower() in ("true", "1", "yes")
 
 # Whether to run the webserver
-WEBSERVER = os.getenv("WEBSERVER", 'False').lower() in ('true', '1', 'yes')
+WEBSERVER = os.getenv('WEBSERVER', "False").lower() in ("true", "1", "yes")
 
 # Hostname to bind to, default is "everything"
-HOST = os.environ.get('HOST', '0.0.0.0')
+HOST = os.environ.get('HOST', "0.0.0.0")
 
 # Port to bind to, default is 8080
 try:
-    PORT = int(os.environ.get('PORT', '8080'))
+    PORT = int(os.environ.get('PORT', "8080"))
 except ValueError:
     raise ValueError("PORT environment variable must be a valid integer")
 
@@ -103,7 +103,7 @@ def get_embed(prefix, data):
     		- `fields`: list of field objects describing each vdev, degraded /
               offline sections (if any) and a timestamp.
     """
-    title = '\🛑 OFFLINE' if data['total'] and data['online'] + data['degraded'] == 0 else '\✅ ONLINE' if data['online'] == data['total'] else '\⚠️ DEGRADED'
+    title = '\🛑 OFFLINE' if data['total'] and data['online'] + data['degraded'] == 0 else "\✅ ONLINE" if data['online'] == data['total'] else "\⚠️ DEGRADED"
     color = 0xFF0000 if data['total'] and data['online'] + data['degraded'] == 0 else 0x00FF00 if data['online'] == data['total'] else 0xFFA500
     description = f"{data['online']} / {data['total']} online" + ("" if data['online'] + data['degraded'] == data['total'] else f" ({data['online'] - data['degraded']} unavailable)")
     fields = []
@@ -112,7 +112,7 @@ def get_embed(prefix, data):
         description += f", {data['alloc_space']} / {data['total_space']} used"
 
     for vdev_name, vdev in data['vdevs'].items():
-        vdev_icon = '\🛑' if vdev['total'] and vdev['online'] + vdev['degraded'] == 0 else '\✅' if vdev['online'] == vdev['total'] else '\⚠️'
+        vdev_icon = '\🛑' if vdev['total'] and vdev['online'] + vdev['degraded'] == 0 else '\✅' if vdev['online'] == vdev['total'] else "\⚠️"
         fields.append({
             "name": f"{vdev_icon} {vdev_name}",
             "value": f"{vdev['online']} / {vdev['total']} online" + ("" if vdev['online'] + vdev['degraded'] == vdev['total'] else f" ({vdev['online'] - vdev['degraded']} unavailable)"),
@@ -143,7 +143,7 @@ def get_embed(prefix, data):
 
     return {
         "title": (prefix + ': ' if prefix else '') + title,
-        "description": description + ('\n' + EXTRA if EXTRA else ''),
+        "description": description + ("\n" + EXTRA if EXTRA else ''),
         "color": color,
         "fields": fields,
     }
@@ -157,7 +157,7 @@ def check_status(data):
     if old_data != data:
         embeds = []
 
-        logger.info('Status: ' + ('OFFLINE' if data['total'] and data['online'] + data['degraded'] == 0 else 'ONLINE' if data['online'] == data['total'] else 'DEGRADED'))
+        logger.info("Status: " + ("OFFLINE" if data['total'] and data['online'] + data['degraded'] == 0 else "ONLINE" if data['online'] == data['total'] else "DEGRADED"))
 
         if not VERBOSE:
             embeds.append(get_embed('', data))
@@ -169,12 +169,12 @@ def check_status(data):
         old_data = data.copy()
 
         payload = {
-            "embeds": embeds,
-            "allowed_mentions": {
-                "parse": ["users", "roles", "everyone"],
+            'embeds': embeds,
+            'allowed_mentions': {
+                'parse': ['users', 'roles', 'everyone'],
             },
         }
-        headers = {"Content-Type": "application/json"}
+        headers = {'Content-Type': "application/json"}
 
         for attempt in range(DISCORD_MAX_RETRIES):
             try:
@@ -233,9 +233,9 @@ def check():
             count_by_state(data, pool)
 
             pool_data = data['vdevs'][pool_name] = {
-                "degraded_drives": [],
-                "offline_drives": [],
-                "vdevs": {},
+                'degraded_drives': [],
+                'offline_drives': [],
+                'vdevs': {},
             }
 
             if SHOW_SPACE and 'alloc_space' in pool['vdevs'][pool_name]:
@@ -315,13 +315,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             path = str(self.path)[1:].split('?', 1)[0]
 
-            if path == '_ping':
+            if path == "_ping":
                 self.send_response(204)
                 self.end_headers()
                 return
 
             data = old_data
-            for key in path.split('/'):
+            for key in path.split("/"):
                 if not key:
                     continue
                 if key not in data:
@@ -331,12 +331,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 data = data[key]
 
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
+            self.send_header('Content-type', "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(data).encode(encoding='utf8'))
 
         except Exception:
-            logger.exception('Web error')
+            logger.exception("Web error")
             try:
                 self.send_response(500)
                 self.end_headers()
@@ -372,7 +372,7 @@ def main():
     """
     try:
         if WEBSERVER:
-            logger.info('Starting web server')
+            logger.info("Starting web server")
             server = http.server.ThreadingHTTPServer((HOST, PORT), Handler)
             thread = threading.Thread(target = server.serve_forever)
             thread.daemon = True
@@ -383,7 +383,7 @@ def main():
             shutdown_event.wait(CHECK_DELAY)
 
     except Exception:
-        logger.exception('Application error')
+        logger.exception("Application error")
         sys.exit(1)
 
 def quit(signo, _frame):
