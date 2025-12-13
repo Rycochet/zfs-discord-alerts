@@ -12,9 +12,9 @@ on:
       - 'master'
     tags:
       - 'v*.*.*'
-  pull_request:
-    branches:
-      - 'master'
+  # pull_request:
+  #   branches:
+  #     - 'master'
 
 env:
   # github.repository as <account>/<repo>
