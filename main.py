@@ -44,7 +44,7 @@ if DISCORD_RETRY_DELAY < 0:
 
 # How long should we wait between checks - 5 minutes default
 try:
-    CHECK_DELAY = int(os.environ.get('CHECK_DELAY', "5"))
+    CHECK_DELAY = int(os.environ.get('CHECK_DELAY', "300"))
 except ValueError as err:
     raise ValueError("CHECK_DELAY must be a valid integer") from err
 if CHECK_DELAY < 0:
