@@ -28,12 +28,21 @@ DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL')
 if not DISCORD_WEBHOOK_URL:
     raise ValueError("DISCORD_WEBHOOK_URL environment variable is required")
 
-DISCORD_MAX_RETRIES = int(os.environ.get('DISCORD_MAX_RETRIES', '3'))
+try:
+    DISCORD_MAX_RETRIES = int(os.environ.get('DISCORD_MAX_RETRIES', '5'))
+except ValueError:
+    raise ValueError("DISCORD_MAX_RETRIES environment variable must be a valid integer")
 
-DISCORD_RETRY_DELAY = int(os.environ.get('DISCORD_RETRY_DELAY', '5'))
+try:
+    DISCORD_RETRY_DELAY = int(os.environ.get('DISCORD_RETRY_DELAY', '5'))
+except ValueError:
+    raise ValueError("DISCORD_RETRY_DELAY environment variable must be a valid integer")
 
 # How long should we wait between checks - 5 minutes default
-CHECK_DELAY = int(os.environ.get('CHECK_DELAY', '300'))
+try:
+    CHECK_DELAY = int(os.environ.get('CHECK_DELAY', '5'))
+except ValueError:
+    raise ValueError("CHECK_DELAY environment variable must be a valid integer")
 
 # Extra text to add to notifications
 EXTRA = os.environ.get('EXTRA', '')
@@ -63,7 +72,10 @@ WEBSERVER = os.getenv("WEBSERVER", 'False').lower() in ('true', '1', 'yes')
 HOST = os.environ.get('HOST', '0.0.0.0')
 
 # Port to bind to, default is 8080
-PORT = int(os.environ.get('PORT', '8080'))
+try:
+    PORT = int(os.environ.get('PORT', '8080'))
+except ValueError:
+    raise ValueError("PORT environment variable must be a valid integer")
 
 def get_embed(prefix, data):
     """
@@ -323,8 +335,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(data).encode(encoding='utf8'))
 
-        except Exception as e:
-            logger.exception("Web error")
+        except Exception:
+            logger.exception('Web error')
             try:
                 self.send_response(500)
                 self.end_headers()
@@ -360,7 +372,7 @@ def main():
     """
     try:
         if WEBSERVER:
-            logging.info('Starting web server')
+            logger.info('Starting web server')
             server = http.server.ThreadingHTTPServer((HOST, PORT), Handler)
             thread = threading.Thread(target = server.serve_forever)
             thread.daemon = True
@@ -370,8 +382,8 @@ def main():
             check()
             shutdown_event.wait(CHECK_DELAY)
 
-    except Exception as e:
-        logger.error(f"Application error: {e}")
+    except Exception:
+        logger.exception('Application error')
         sys.exit(1)
 
 def quit(signo, _frame):
