@@ -57,7 +57,7 @@ SHOW_SPACE = os.getenv("SHOW_SPACE", 'False').lower() in ('true', '1', 'yes')
 VERBOSE = os.getenv("VERBOSE", 'False').lower() in ('true', '1', 'yes')
 
 # Whether to run the webserver
-WEBSERVER = os.getenv("WEBSERVER", 'True').lower() in ('true', '1', 'yes')
+WEBSERVER = os.getenv("WEBSERVER", 'False').lower() in ('true', '1', 'yes')
 
 # Hostname to bind to, default is "everything"
 HOST = os.environ.get('HOST', '0.0.0.0')
@@ -274,7 +274,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not key:
                     continue
                 if key not in data:
-                    self.send_response_only(404)
+                    self.send_response(404)
+                    self.end_headers()
                     return
                 data = data[key]
 
@@ -284,13 +285,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(data).encode(encoding='utf8'))
 
         except Exception as e:
-            logger.error(f"Web error: {e}")
+            logger.exception("Web error")
+            try:
+                self.send_response(500)
+                self.end_headers()
+            except Exception:
+                pass
 
     def log_request(self, *args):
-        if logging.DEBUG >= logging.root.level:
-            super().log_request(self, *args)
+        if logger.isEnabledFor(logging.DEBUG):
+            super().log_request(*args)
 
-exit = Event()
+shutdown_event = Event()
 
 def main():
     try:
@@ -301,17 +307,17 @@ def main():
             thread.daemon = True
             thread.start()
 
-        while not exit.is_set():
+        while not shutdown_event.is_set():
             check()
-            exit.wait(CHECK_DELAY)
+            shutdown_event.wait(CHECK_DELAY)
 
     except Exception as e:
         logger.error(f"Application error: {e}")
-        exit(1)
+        sys.exit(1)
 
 def quit(signo, _frame):
     logger.info("Interrupted by %d, shutting down" % signo)
-    exit.set()
+    shutdown_event.set()
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, quit)
