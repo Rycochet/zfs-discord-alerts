@@ -248,17 +248,6 @@ def check():
     except subprocess.CalledProcessError as e:
         logger.error(f"Error executing command: {e}")
 
-_empty = object()
-def deep_get(dct, dotted_path, default = _empty):
-    for key in dotted_path.split('.'):
-        try:
-            dct = dct[key]
-        except KeyError:
-            if default is _empty:
-                raise
-            return default
-    return dct
-
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         try:
