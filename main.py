@@ -68,21 +68,28 @@ PORT = int(os.environ.get('PORT', '8080'))
 def get_embed(prefix, data):
     """
     Builds a Discord embed payload summarising pool and vdev health.
-    
+
     Parameters:
     	prefix (str): Optional string prepended to the embed title when provided.
-    	data (dict): Status dictionary containing at minimum `total`, `online`, `degraded` and `vdevs`. Supported optional keys:
-    		- `alloc_space`, `total_space` (str): human-readable space usage for top-level data or per-vdev entries.
-    		- `vdevs` (dict): mapping of vdev name -> dict with `total`, `online`, `degraded` and optionally `alloc_space`, `total_space`.
-    		- `degraded_drives` (list[str]): list of degraded drive identifiers to include as a field.
-    		- `offline_drives` (list[str]): list of offline drive identifiers to include as a field.
-    
+    	data (dict): Status dictionary containing at minimum `total`, `online`,
+        `degraded` and `vdevs`. Supported optional keys:
+    		- `alloc_space`, `total_space` (str): human-readable space usage for
+              top-level data or per-vdev entries.
+    		- `vdevs` (dict): mapping of vdev name -> dict with `total`,
+              `online`, `degraded` and optionally `alloc_space`, `total_space`.
+    		- `degraded_drives` (list[str]): list of degraded drive identifiers
+              to include as a field.
+    		- `offline_drives` (list[str]): list of offline drive identifiers to
+              include as a field.
+
     Returns:
     	dict: A Discord embed payload with keys:
     		- `title`: embed title including optional prefix and overall status.
-    		- `description`: summary of online/total counts and optional space usage, with EXTRA appended when configured.
+    		- `description`: summary of online/total counts and optional space
+              usage, with EXTRA appended when configured.
     		- `color`: integer hex colour representing status.
-    		- `fields`: list of field objects describing each vdev, degraded/offline sections (if any) and a timestamp.
+    		- `fields`: list of field objects describing each vdev, degraded /
+              offline sections (if any) and a timestamp.
     """
     title = '\🛑 OFFLINE' if data['total'] and data['online'] + data['degraded'] == 0 else '\✅ ONLINE' if data['online'] == data['total'] else '\⚠️ DEGRADED'
     color = 0xFF0000 if data['total'] and data['online'] + data['degraded'] == 0 else 0x00FF00 if data['online'] == data['total'] else 0xFFA500
@@ -176,9 +183,18 @@ def check_status(data):
 
 def check():
     """
-    Poll ZFS pool status, build a structured summary of pools/vdevs/drives, and forward it to check_status.
-    
-    Runs a ZFS status query for the configured POOLS and constructs a nested data structure with top-level counters and per-pool entries under `vdevs`. Each pool entry contains `total`, `online`, `degraded` counters, a `vdevs` mapping of vdev summaries with the same counters, and lists `degraded_drives` and `offline_drives` for any non‑online devices. When SHOW_SPACE is enabled and space data is present, pool entries also include `alloc_space` and `total_space`. The completed structure is passed to check_status. Any subprocess.CalledProcessError raised while querying ZFS is logged.
+    Poll ZFS pool status, build a structured summary of pools/vdevs/drives, an
+      forward it to check_status.
+
+    Runs a ZFS status query for the configured POOLS and constructs a nested
+    data structure with top-level counters and per-pool entries under `vdevs`.
+    Each pool entry contains `total`, `online`, `degraded` counters, a `vdevs`
+    mapping of vdev summaries with the same counters, and lists
+    `degraded_drives` and `offline_drives` for any non‑online devices. When
+    SHOW_SPACE is enabled and space data is present, pool entries also include
+    `alloc_space` and `total_space`. The completed structure is passed to
+    check_status. Any subprocess.CalledProcessError raised while querying ZFS is
+    logged.
     """
     def create_count(data):
         data['total'] = 0
@@ -271,40 +287,17 @@ def check():
     except subprocess.CalledProcessError as e:
         logger.error(f"Error executing command: {e}")
 
-_empty = object()
-def deep_get(dct, dotted_path, default = _empty):
-    """
-    Retrieve a value from a nested mapping using a dot-separated key path.
-    
-    Parameters:
-        dct (dict): Mapping to traverse.
-        dotted_path (str): Dot-separated sequence of keys, e.g. "pool.vdev.slot".
-        default (Any, optional): Value to return if any key is missing. If omitted, a KeyError is raised.
-    
-    Returns:
-        The value found at the end of the path, or `default` if provided and a key is missing.
-    
-    Raises:
-        KeyError: If a key along the path is missing and `default` is not provided.
-    """
-    for key in dotted_path.split('.'):
-        try:
-            dct = dct[key]
-        except KeyError:
-            if default is _empty:
-                raise
-            return default
-    return dct
-
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         """
         Handle incoming HTTP GET requests for the monitoring web server.
-        
-        Responds with 204 for the special "_ping" path. For other paths, treats the URL path segments as keys into the global `old_data` structure and:
-        - responds 200 with the JSON-serialized value when the key path is found (Content-Type: application/json),
+
+        Responds with 204 for the special "_ping" path. For other paths, treats
+        the URL path segments as keys into the global `old_data` structure and:
+        - responds 200 with the JSON-serialized value when the key path is found
+          (Content-Type: application/json),
         - responds 404 when any path segment is not present.
-        
+
         On unexpected errors logs the exception and attempts to respond 500.
         """
         try:
@@ -341,11 +334,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def log_request(self, *args):
         """
         Log an HTTP request only when the global logger is set to DEBUG.
-        
-        If the global logger's level includes DEBUG, forwards the original arguments to
-        BaseHTTPRequestHandler.log_request to produce the usual request-line logging;
-        otherwise suppresses the log entry.
-        
+
+        If the global logger's level includes DEBUG, forwards the original
+        arguments to BaseHTTPRequestHandler.log_request to produce the usual
+        request-line logging; otherwise suppresses the log entry.
+
         Parameters:
             *args: Positional arguments accepted by BaseHTTPRequestHandler.log_request
         """
@@ -356,9 +349,14 @@ shutdown_event = Event()
 
 def main():
     """
-    Start the application: optionally launch the HTTP server and run the periodic status loop until shutdown.
-    
-    If web server mode is enabled, initialise and start a background ThreadingHTTPServer bound to HOST:PORT. Enter a loop that repeatedly calls check() and waits for CHECK_DELAY between iterations until shutdown_event is set. On any unhandled exception the error is logged and the process exits with status code 1.
+    Start the application: optionally launch the HTTP server and run the
+    periodic status loop until shutdown.
+
+    If web server mode is enabled, initialise and start a background
+    ThreadingHTTPServer bound to HOST:PORT. Enter a loop that repeatedly calls
+    check() and waits for CHECK_DELAY between iterations until shutdown_event is
+    set. On any unhandled exception the error is logged and the process exits
+    with status code 1.
     """
     try:
         if WEBSERVER:
@@ -378,8 +376,9 @@ def main():
 
 def quit(signo, _frame):
     """
-    Handle termination signals by logging the interrupt and initiating a graceful shutdown.
-    
+    Handle termination signals by logging the interrupt and initiating a
+    graceful shutdown.
+
     Parameters:
         signo (int): Signal number that triggered the handler.
         _frame (frame): Current stack frame at time of signal (unused).
