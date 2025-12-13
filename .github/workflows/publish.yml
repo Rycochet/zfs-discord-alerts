@@ -12,9 +12,9 @@ on:
       - 'master'
     tags:
       - 'v*.*.*'
-  # pull_request:
-  #   branches:
-  #     - 'master'
+  pull_request:
+    branches:
+      - 'master'
 
 env:
   # github.repository as <account>/<repo>
@@ -66,6 +66,8 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}.{{patch}}
             # set latest tag for default branch
             type=raw,value=latest,enable={{is_default_branch}}
+            # set branch name for other branches
+            type=raw,value={{branch}},enable={{is_not_default_branch}}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
