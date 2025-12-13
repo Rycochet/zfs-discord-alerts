@@ -12,3 +12,12 @@ services:
       LOG_LEVEL: "INFO" # Normal linux log levels
       POOLS: "" # Empty for watching everything, space separated
       VERBOSE: "False" # Gives more information on alerts
+      WEBSERVER: "True"
+
+    # Can only enable if the WEBSERVER is enabled
+    healthcheck:
+      interval: "30s"
+      timeout: "5s"
+      retries: 3
+      start_period: "10s"
+      test: "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/_ping || exit 1"

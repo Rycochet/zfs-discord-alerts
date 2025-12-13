@@ -1,3 +1,4 @@
+import http.server
 import json
 import logging
 import os
@@ -6,6 +7,7 @@ import requests
 import signal
 import subprocess
 import sys
+import threading
 import time
 
 from dotenv import load_dotenv
@@ -53,6 +55,15 @@ SHOW_SPACE = os.getenv("SHOW_SPACE", 'False').lower() in ('true', '1', 'yes')
 
 # Verbose monitoring configuration
 VERBOSE = os.getenv("VERBOSE", 'False').lower() in ('true', '1', 'yes')
+
+# Whether to run the webserver
+WEBSERVER = os.getenv("WEBSERVER", 'True').lower() in ('true', '1', 'yes')
+
+# Hostname to bind to, default is "everything"
+HOST = os.environ.get('HOST', '0.0.0.0')
+
+# Port to bind to, default is 8080
+PORT = int(os.environ.get('PORT', '8080'))
 
 def get_embed(prefix, data):
     title = '\🛑 OFFLINE' if data['total'] and data['online'] + data['degraded'] == 0 else '\✅ ONLINE' if data['online'] == data['total'] else '\⚠️ DEGRADED'
@@ -237,10 +248,59 @@ def check():
     except subprocess.CalledProcessError as e:
         logger.error(f"Error executing command: {e}")
 
+_empty = object()
+def deep_get(dct, dotted_path, default = _empty):
+    for key in dotted_path.split('.'):
+        try:
+            dct = dct[key]
+        except KeyError:
+            if default is _empty:
+                raise
+            return default
+    return dct
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        try:
+            path = str(self.path)[1:].split('?', 1)[0]
+
+            if path == '_ping':
+                self.send_response(204)
+                self.end_headers()
+                return
+
+            data = old_data
+            for key in path.split('/'):
+                if not key:
+                    continue
+                if key not in data:
+                    self.send_response_only(404)
+                    return
+                data = data[key]
+
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode(encoding='utf8'))
+
+        except Exception as e:
+            logger.error(f"Web error: {e}")
+
+    def log_request(self, *args):
+        if logging.DEBUG >= logging.root.level:
+            super().log_request(self, *args)
+
 exit = Event()
 
 def main():
     try:
+        if WEBSERVER:
+            logging.info('Starting web server')
+            server = http.server.ThreadingHTTPServer((HOST, PORT), Handler)
+            thread = threading.Thread(target = server.serve_forever)
+            thread.daemon = True
+            thread.start()
+
         while not exit.is_set():
             check()
             exit.wait(CHECK_DELAY)
